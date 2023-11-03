@@ -55,6 +55,28 @@ function GridFunction1D(name::AbstractString, domain::Interval{S}, codomain::Int
 end
 export GridFunction1D
 
+"""
+    GridFunction1D{S,T}(name::AbstractString, domain::Interval{S}, codomain::Interval{T}, npoints::Int)
+    GridFunction1D(name::AbstractString, domain::Interval{S}, codomain::Interval{T}, npoints::Int)
+
+Create a zero-valued grid function, i.e. a grid function that is zero
+everywhere. The `codomain` can be a zero-valued domain created via
+[`Interval{T}()`](@ref).
+
+`npoints` specifies the resolution of the grid function. This makes
+it convenient to use zero-valued grid functions as "templates" or
+"skeletons" when creating other grid functions.
+
+This zero-valued grid function is represented efficiently and does
+*not* store one element per grid point.
+"""
+function GridFunction1D{S,T}(name::AbstractString, domain::Interval{S}, codomain::Interval{T}, npoints::Int) where {S,T}
+    return GridFunction1D(name, domain, Interval{T}(), Zeros{T}(npoints))
+end
+function GridFunction1D(name::AbstractString, domain::Interval{S}, codomain::Interval{T}, npoints::Int) where {S,T}
+    return GridFunction1D{S,T}(name, domain, codomain, npoints)
+end
+
 # Metadata
 name(gf::GridFunction1D) = gf.name
 domain(gf::GridFunction1D) = gf.domain
@@ -77,6 +99,7 @@ function Base.map(f, x::GridFunction1D)
 end
 function Base.map(f, x::GridFunction1D, y::GridFunction1D)
     @assert domain(x) == domain(y)
+    @assert axes(x.grid) == axes(y.grid)
     grid′ = map(f, x.grid, y.grid)
     return GridFunction1D(x.name, x.domain, Interval(extrema(grid′)...), grid′)
 end
@@ -152,6 +175,30 @@ function GridFunction(
 end
 export GridFunction
 
+"""
+    GridFunction{DS,S,DT,T}(name::AbstractString, domain::Box{DS,S}, codomain::Box{DT,T}, grid_shape::SVector{DS,Int})
+    GridFunction(name::AbstractString, domain::Box{DS,S}, codomain::Box{DT,T}, grid_shape::SVector{DS,Int})
+
+Create a zero-valued grid function, i.e. a grid function that is zero
+everywhere. The `codomain` can be a zero-valued domain created via
+[`Box{DT,T}()`](@ref).
+
+`grid_shape` specifies the resolution of the grid function. This makes
+it convenient to use zero-valued grid functions as "templates" or
+"skeletons" when creating other grid functions.
+
+This zero-valued grid function is represented efficiently and does
+*not* store one element per grid point.
+"""
+function GridFunction{DS,S,DT,T}(
+    name::AbstractString, domain::Box{DS,S}, codomain::Box{DT,T}, grid_shape::SVector{DS,Int}
+) where {DS,S,DT,T}
+    return GridFunction(name, domain, Box{DT,T}(), Zeros{T}(Tuple(grid_shape)))
+end
+function GridFunction(name::AbstractString, domain::Box{DS,S}, codomain::Box{DT,T}, grid_shape::SVector{DS,Int}) where {DS,S,DT,T}
+    return GridFunction{DS,S,DT,T}(name, domain, codomain, grid_shape)
+end
+
 # Metadata
 name(gf::GridFunction) = gf.name
 domain(gf::GridFunction) = gf.domain
@@ -178,6 +225,7 @@ function Base.map(f, x::GridFunction)
 end
 function Base.map(f, x::GridFunction{DS}, y::GridFunction{DS}) where {DS}
     @assert domain(x) == domain(y)
+    @assert axes(x.grid) == axes(y.grid)
     grid′ = map(f, x.grid, y.grid)
     VT = eltype(grid′)
     VT::SVector
@@ -251,6 +299,21 @@ struct JuliaFunction{DS,S,DT,T} <: Category{Box{DS,S},Box{DT,T}}
     fun::Any
 end
 export JuliaFunction
+
+"""
+    JuliaFunction{DS,S,DT,T}(name::AbstractString, domain::Box{DS,S}, codomain::Box{DT,T})
+    JuliaFunction(name::AbstractString, domain::Box{DS,S}, codomain::Box{DT,T})
+
+Create a zero-valued Julia function, i.e. a Julia function that is
+zero everywhere. The `codomain` can be a zero-valued domain created
+via [`Box{DT,T}()`](@ref).
+"""
+function JuliaFunction{DS,S,DT,T}(name::AbstractString, domain::Box{DS,S}, codomain::Box{DT,T}) where {DS,S,DT,T}
+    return JuliaFunction(name, domain, Box{DT,T}(), Returns(zero(SVector{DT,T})))
+end
+function JuliaFunction(name::AbstractString, domain::Box{DS,S}, codomain::Box{DT,T}) where {DS,S,DT,T}
+    return JuliaFunction{DS,S,DT,T}(name, domain, codomain)
+end
 
 # Metadata
 name(jf::JuliaFunction) = jf.name
@@ -355,4 +418,5 @@ function Base.:/(x::JuliaFunction, a)
     return JuliaFunction(name(x), domain(x), cod′, w -> x.fun(w) / a)
 end
 
-evaluate(jf::JuliaFunction{DS,<:Any,DT,T}, x::SVector{DS}) where {DS,DT,T} = SVector{DT,T}(jf.fun(x))
+evaluate(jf::JuliaFunction{DS,S,DT,T}, x::SVector{DS,S}) where {DS,S,DT,T} = jf.fun(x)::SVector{DT,T}
+evaluate(jf::JuliaFunction{DS,S,DT,T}, x::SVector{DS}) where {DS,S,DT,T} = evaluate(jf, SVector{DS,S}(x))

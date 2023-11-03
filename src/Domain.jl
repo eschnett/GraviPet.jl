@@ -121,6 +121,15 @@ Interval(first::T, last::T) where {T<:Real} = Interval{T}(first, last)
 Interval(first::Real, last::Real) = Interval(promote(first, last)...)
 export Interval
 
+"""
+    Interval{T}()
+
+Create a zero-valued interval, i.e. an interval where both lower and
+upper bounds are zero. This is also a convenient way to provide a
+"skeleton" for a domain without having to specify any bounds.
+"""
+Interval{T}() where {T} = Interval{T}(zero(T), zero(T))
+
 # Metadata
 Base.ndims(::Interval) = 1
 Base.first(iv::Interval) = iv.first
@@ -172,6 +181,15 @@ Box{D,T}(first::SVector{D,<:Real}, last::SVector{D,<:Real}) where {D,T} = Box{D,
 Box(first::SVector{D,T}, last::SVector{D,T}) where {D,T<:Real} = Box{D,T}(first, last)
 Box(first::SVector{D,<:Real}, last::SVector{D,<:Real}) where {D} = Box(promote(first, last)...)
 export Box
+
+"""
+    Box{D,T}()
+
+Create a zero-valued box domain, i.e. a box where both lower and upper
+bounds are zero. This is also a convenient way to provide a "skeleton"
+for a domain without having to specify any bounds.
+"""
+Box{D,T}() where {D,T} = Box{D,T}(zero(SVector{D,T}), zero(SVector{D,T}))
 
 # Metadata
 Base.ndims(::Box{D}) where {D} = D
