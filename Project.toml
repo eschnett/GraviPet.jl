@@ -1,0 +1,7 @@
+name = "GraviPet"
+uuid = "5928621a-8be5-4e72-aa40-6d276f04f5c4"
+authors = ["Erik Schnetter <schnetter@gmail.com>"]
+version = "0.1.0"
+
+[deps]
+StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
