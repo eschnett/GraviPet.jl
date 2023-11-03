@@ -83,6 +83,14 @@ Test whether `dom1` is a subset of `dom2`. Only compatible domains
 """
 Base.issubset(dom1::Domain, dom2::Domain) = throw(MethodError(issubset, (dom1, dom2)))
 
+"""
+    isdisjoint(dom1::Domain, dom2::Domain)::Bool
+
+Test whether `dom1` is disjoint from `dom2`. Only compatible domains
+(which live in the same number of dimensions) can be compared.
+"""
+Base.isdisjoint(dom1::Domain, dom2::Domain) = throw(MethodError(isdisjoint, (dom1, dom2)))
+
 # Membership test
 
 """
