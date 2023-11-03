@@ -91,7 +91,7 @@ function Base.identity(gf::GridFunction1D)
     elseif length(gf.grid) == 1
         T[first(dom)]
     else
-        range(first(dom), last(dom), length(gf.grid))
+        range(first(dom), last(dom); length=length(gf.grid))
     end
     return GridFunction1D(gf.name, dom, dom, grid)
 end
@@ -241,3 +241,78 @@ function evaluate(gf::GridFunction{DS,S,DT,T}, x::SVector{DS,S}) where {DS,S,DT,
     return fx::SVector{DT,T}
 end
 evaluate(gf::GridFunction{DS,S}, x::SVector{DS}) where {DS,S} = evaluate(gf, SVector{DS,S}(x))
+
+################################################################################
+
+# struct JuliaFunction{DS,S,DT,T} <: Category{Box{DS,S},Box{DT,T}}
+#     name::AbstractString
+#     domain::Box{DS,S}
+#     codomain::Box{DT,T}
+#     fun::Any
+# end
+# export JuliaFunction
+# 
+# # Metadata
+# name(jf::JuliaFunction) = jf.name
+# domain(jf::JuliaFunction) = jf.domain
+# codomain(jf::JuliaFunction) = jf.codomain
+# 
+# # Equality
+# function Base.:(==)(jf1::JuliaFunction, jf2::JuliaFunction)
+#     domain(jf1) == domain(jf2) || return false
+#     codomain(jf1) == codomain(jf2) || return false
+#     return jf1.grid == jf2.grid
+# end
+# 
+# # Collection is not available
+# Base.isempty(x::Category) = throw(MethodError(isempty, (x,)))
+# Base.length(x::Category) = throw(MethodError(length, (x,)))
+# Base.getindex(x::Category, i) = throw(MethodError(getindex, (x, i)))
+# Base.map(f, x::Category) = throw(MethodError(map, (f, x)))
+# Base.map(f, x::Category, y::Category) = throw(MethodError(map, (f, x, y)))
+# 
+# # Category
+# Base.identity(jf::JuliaFunction) = JuliaFunction(jf.name, jf.dom, jf.dom, identity)
+# function Base.:∘(jf2::JuliaFunction{<:Any,<:Any,DT}, jf1::JuliaFunction{DT}) where {DT}
+#     @assert domain(jf2) == codomain(jf1)
+#     return JuliaFunction(jf1.name, jf1.dom, jf2.cod, jf2.fun ∘ jf1.fun)
+# end
+# 
+# CONTINUE HERE
+# 
+# # Vector space
+# Base.zero(x::JuliaFunction) = map(zero, x)
+# Base.:+(x::JuliaFunction) = map(+, x)
+# Base.:-(x::JuliaFunction) = map(-, x)
+# Base.:+(x::JuliaFunction, y::JuliaFunction) = map(+, x, y)
+# Base.:-(x::JuliaFunction, y::JuliaFunction) = map(-, x, y)
+# Base.:*(a, x::JuliaFunction) = map(w -> a * w, x)
+# Base.:*(x::JuliaFunction, a) = map(w -> w * a, x)
+# Base.:\(a, x::JuliaFunction) = map(w -> a \ w, x)
+# Base.:/(x::JuliaFunction, a) = map(w -> w / a, x)
+# 
+# function evaluate(jf::JuliaFunction{DS,S,DT,T}, x::SVector{DS,S}) where {DS,S,DT,T}
+#     isempty(jf.grid) && return zero(SVector{DT,T})::SVector{DT,T}
+#     length(jf.grid) == 1 && return jf.grid[begin]::SVector{DT,T}
+# 
+#     # x = first <=> i = firstindex
+#     # x = last  <=> i = lastindex
+#     dom = domain(jf)
+#     ix =
+#         SVector(first.(axes(jf.grid))) .* ((x - last(dom)) ./ (first(dom) - last(dom))) +
+#         SVector(last.(axes(jf.grid))) .* ((x - first(dom)) ./ (last(dom) - first(dom)))
+#     i = SVector{DS,Int}(clamp(floor(Int, ix[d]), first.(axes(jf.grid))[d]:(last.(axes(jf.grid))[d] - 1)) for d in 1:DS)
+#     q = (ix - i)::SVector{DS,S}
+# 
+#     fx = zero(SVector{DT,T})
+#     for di0 in CartesianIndex(ntuple(d -> 0, DS)):CartesianIndex(ntuple(d -> 1, DS))
+#         di = SVector{DS,Int}(Tuple(di0))
+#         w = one(S)
+#         for d in 1:DS
+#             w *= di[d] == 0 ? 1 - q[d] : q[d]
+#         end
+#         fx += SVector{DT,T}(w * jf.grid[CartesianIndex(Tuple(i + di))])
+#     end
+#     return fx::SVector{DT,T}
+# end
+# evaluate(jf::JuliaFunction{DS,S}, x::SVector{DS}) where {DS,S} = evaluate(jf, SVector{DS,S}(x))

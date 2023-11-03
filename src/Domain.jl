@@ -70,8 +70,8 @@ Base.last(box::Box) = box.last
 Base.:(==)(box1::Box, box2::Box) = box1.first == box2.first && box1.last == box2.last
 
 # Set relations
-Base.issubset(box1::Box, box2::Box) = all(box1.first .>= box2.first .&& box1.last .<= box2.last)
-Base.isdisjoint(box1::Box, box2::Box) = all(box1.last .< box2.first .|| box2.last .< box1.first)
+Base.issubset(box1::Box, box2::Box) = all((box1.first .>= box2.first) .& (box1.last .<= box2.last))
+Base.isdisjoint(box1::Box, box2::Box) = all((box1.last .< box2.first) .| (box2.last .< box1.first))
 
 # Membership test
 Base.in(x, box::Box) = all(first(box) .<= x .<= last(box))
