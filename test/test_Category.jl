@@ -50,8 +50,8 @@ function test_Category(
         @test y ≈ x atol = atol
     end
 
+    # TODO: test collection better
     # TODO: test function composition
-
     # TODO: test vector spaces
 end
 

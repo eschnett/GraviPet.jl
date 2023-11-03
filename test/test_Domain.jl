@@ -8,14 +8,17 @@ function test_Domain(::Val{D}, ::Type{T}, ::Type{DomainT}, makeDomainT) where {D
 
     @test dom == dom
 
+    @test dom ⊆ dom
+    @test !isdisjoint(dom, dom)
+
     for x in values
-        @test x in dom
+        @test x ∈ dom
     end
     for x in notvalues
-        @test !(x in dom)
+        @test x ∉ dom
     end
 
-    # TODO: test issubset, isdisjoint
+    # TODO: test issubset, isdisjoint better
 end
 
 Random.seed!(0)
