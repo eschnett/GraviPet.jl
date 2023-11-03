@@ -1,5 +1,5 @@
 abstract type Category{Dom,Cod} end
-export Category, name, domain, codomain, evaluate
+export Category, name, domain, codomain, project, evaluate
 
 # Metadata
 name(cat::Category) = throw(MethodError(name, (cat,)))
@@ -32,7 +32,30 @@ Base.:*(x::Category, a) = throw(MethodError(*, (x, a)))
 Base.:\(a, x::Category) = throw(MethodError(\, (a, x)))
 Base.:/(x::Category, a) = throw(MethodError(/, (x, a)))
 
+"""
+    project(dst::T, src::Category)::T where {T<:Category}
+
+Project the function `src` onto the representation given by `dst`.
+This can be used e.g. to sample Julia functions on a given grid, or to
+resample functiont on a different grid. `dst` can be a skeleton
+representation.
+"""
+project(dst::Category, src::Category) = throw(MethodError(project, (dst, src)))
+
+"""
+    evaluate(cat::Category, x)::eltype(codomain(cat))
+
+Evaluate the function `cat` at point `x`. This can also be written as
+a function call `cat(x)`.
+"""
 evaluate(cat::Category, x) = throw(MethodError(evaluate, (cat, x)))
+
+"""
+    (cat::Category)(x)::eltype(codomain(cat))
+
+Evaluate the function `cat` at point `x`. This is written as a
+function call `cat(x)`. See also [`evaluate`](@ref).
+"""
 (cat::Category)(x) = evaluate(cat, x)
 
 ################################################################################
@@ -120,7 +143,7 @@ function Base.identity(gf::GridFunction1D)
 end
 function Base.:∘(gf2::GridFunction1D, gf1::GridFunction1D)
     @assert domain(gf2) == codomain(gf1)
-    return map(w -> evaluate(gf2, w), gf1)
+    return map(gf2, gf1)
 end
 
 # Vector space
@@ -133,6 +156,13 @@ Base.:*(a, x::GridFunction1D) = map(w -> a * w, x)
 Base.:*(x::GridFunction1D, a) = map(w -> w * a, x)
 Base.:\(a, x::GridFunction1D) = map(w -> a \ w, x)
 Base.:/(x::GridFunction1D, a) = map(w -> w / a, x)
+
+# We sample instead of projecting...
+function project(gf::GridFunction1D, cat::Category)
+    @assert domain(gf) == domain(cat)
+    grid = map(cat, gf.grid)
+    return GridFunction1D(name(cat), domain(cat), codomain(cat), grid)
+end
 
 function evaluate(gf::GridFunction1D{<:Any,T}, x::T) where {T}
     isempty(gf.grid) && return zero(T)::T
@@ -250,7 +280,7 @@ function Base.identity(gf::GridFunction)
 end
 function Base.:∘(gf2::GridFunction{<:Any,<:Any,DT}, gf1::GridFunction{DT}) where {DT}
     @assert domain(gf2) == codomain(gf1)
-    return map(w -> evaluate(gf2, w), gf1)
+    return map(gf2, gf1)
 end
 
 # Vector space
@@ -263,6 +293,13 @@ Base.:*(a, x::GridFunction) = map(w -> a * w, x)
 Base.:*(x::GridFunction, a) = map(w -> w * a, x)
 Base.:\(a, x::GridFunction) = map(w -> a \ w, x)
 Base.:/(x::GridFunction, a) = map(w -> w / a, x)
+
+# We sample instead of projecting...
+function project(gf::GridFunction, cat::Category)
+    @assert domain(gf) == domain(cat)
+    grid = map(cat, gf.grid)
+    return GridFunction(name(cat), domain(cat), codomain(cat), grid)
+end
 
 function evaluate(gf::GridFunction{DS,S,DT,T}, x::SVector{DS,S}) where {DS,S,DT,T}
     isempty(gf.grid) && return zero(SVector{DT,T})::SVector{DT,T}
@@ -313,6 +350,11 @@ function JuliaFunction{DS,S,DT,T}(name::AbstractString, domain::Box{DS,S}, codom
 end
 function JuliaFunction(name::AbstractString, domain::Box{DS,S}, codomain::Box{DT,T}) where {DS,S,DT,T}
     return JuliaFunction{DS,S,DT,T}(name, domain, codomain)
+end
+
+function project(jf::JuliaFunction, cat::Category)
+    @assert domain(jf) == domain(cat)
+    return JuliaFunction(name(cat), domain(cat), codomain(cat), cat)
 end
 
 # Metadata

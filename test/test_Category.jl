@@ -53,6 +53,7 @@ function test_Category(
     # TODO: test collection better
     # TODO: test function composition
     # TODO: test vector spaces
+    # TODO: test `project`
 end
 
 Random.seed!(0)
