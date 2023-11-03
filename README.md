@@ -7,4 +7,4 @@ GraviPet is the **G**eneral **R**elativistic **A**strophysics
 * [Documentation](https://eschnett.github.io/GraviPet.jl/dev/)
 * [![GitHub
   CI](https://github.com/eschnett/GraviPet.jl/workflows/CI/badge.svg)](https://github.com/eschnett/GraviPet.jl/actions)
-* [![codecov](https://codecov.io/gh/eschnett/GraviPet.jl/branch/main/graph/badge.svg?token=75FT03ULHD)](https://codecov.io/gh/eschnett/GraviPet.jl)
+* [![codecov](https://codecov.io/gh/eschnett/GraviPet.jl/graph/badge.svg?token=VGMG5U8M41)](https://codecov.io/gh/eschnett/GraviPet.jl)
