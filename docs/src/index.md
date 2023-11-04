@@ -1,4 +1,4 @@
-![GraviPet logo](https://github.com/eschnett/GraviPet.jl/figures/GraviPet-light-background.jpg)
+![GraviPet logo](figures/GraviPet-light-background.jpg)
 
 # GraviPet.jl
 
