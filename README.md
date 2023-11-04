@@ -1,3 +1,5 @@
+![GraviPet logo](figures/GraviPet-light-background.jpg)
+
 # GraviPet.jl
 
 GraviPet is the **G**eneral **R**elativistic **A**strophysics
