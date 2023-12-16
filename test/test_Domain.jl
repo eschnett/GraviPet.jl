@@ -18,17 +18,18 @@ function test_Domain(::Val{D}, ::Type{T}, ::Type{DomainT}, makeDomainT) where {D
         @test x ∉ dom
     end
 
+    # TODO: test expanded, shifted
     # TODO: test issubset, isdisjoint better
 end
 
 Random.seed!(0)
 @testset "Interval T=$T" for T in [Float32, Float64, Double64, BigRat]
     function make_dom()
-        xmin = rand((-T(1)):T(0.01):(+T(1)))
-        xmax = rand((xmin + 1):T(0.01):(xmin + 10))
+        xmin = rand((-T(1)):T(1//100):(+T(1)))
+        xmax = rand((xmin + 1):T(1//100):(xmin + 10))
         dom = Interval(xmin, xmax)
-        values = rand(xmin:T(0.01):xmax, 10)
-        notvalues = filter(x -> !(xmin <= x <= xmax), rand(T(xmin - 1):T(0.01):T(xmax + 2), 10))
+        values = rand(xmin:T(1//100):xmax, 10)
+        notvalues = filter(x -> !(xmin ≤ x ≤ xmax), rand(T(xmin - 1):T(1//100):T(xmax + 2), 10))
         return dom, values, notvalues
     end
     for iter in 1:10
@@ -40,14 +41,14 @@ Random.seed!(0)
 @testset "Box D=$D T=$T" for D in 0:4, T in [Float32, Float64, Double64, BigRat]
     function make_dom()
         xmin = random_SVector(
-            SVector{D,T}(T(-1) for d in 1:D), SVector{D,T}(T(0.01) for d in 1:D), SVector{D,T}(T(+1) for d in 1:D)
+            SVector{D,T}(T(-1) for d in 1:D), SVector{D,T}(T(1//100) for d in 1:D), SVector{D,T}(T(+1) for d in 1:D)
         )
-        xmax = random_SVector(xmin .+ 1, SVector{D,T}(T(0.01) for d in 1:D), xmin .+ 10)
+        xmax = random_SVector(xmin .+ 1, SVector{D,T}(T(1//100) for d in 1:D), xmin .+ 10)
         dom = Box(xmin, xmax)
-        values = [random_SVector(xmin, SVector{D,T}(T(0.01) for d in 1:D), xmax) for n in 1:10]
+        values = [random_SVector(xmin, SVector{D,T}(T(1//100) for d in 1:D), xmax) for n in 1:10]
         notvalues = filter(
             x -> any((x .< xmin) .| (x .> xmax)),
-            [random_SVector(xmin .- 1, SVector{D,T}(T(0.01) for d in 1:D), xmax .+ 2) for n in 1:100],
+            [random_SVector(xmin .- 1, SVector{D,T}(T(1//100) for d in 1:D), xmax .+ 2) for n in 1:100],
         )
         return dom, values, notvalues
     end

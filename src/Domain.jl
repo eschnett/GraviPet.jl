@@ -73,6 +73,41 @@ treated as unequal.
 """
 Base.:(==)(dom1::Domain, dom2::Domain) = false # throw(MethodError(==, (dom1, dom2)))
 
+# Domain operations
+
+"""
+    expanded(dom::Domain, delta)::Domain
+    expanded(dom::Domain, delta_lo, delta_hi)::Domain
+
+Expand the domain `dom`. The lower and upper domain bounds are moved
+by either `delta`, or `delta_lo` and `delta_hi`, respectively.
+Positive deltas enlarge the domain, negative values shrink it. Domains
+must be non-empty.
+
+`expanded(dom, delta)` is equivalent to `expanded(dom, delta, delta)`.
+
+See also [`shifted`](@ref).
+"""
+expanded(dom::Domain{T}, delta_lo::T, delta_hi::T) where {T} = throw(MethodError(expanded, (dom, delta_lo, delta_hi)))
+expanded(dom::Domain{T}, delta_lo, delta_hi) where {T} = expanded(dom, T(delta_lo), T(delta_hi))
+expanded(dom::Domain{T}, delta::T) where {T} = expanded(dom, delta, delta)
+expanded(dom::Domain{T}, delta) where {T} = expanded(dom, T(delta))
+export expanded
+
+"""
+    shifted(dom::Domain, shift)::Domain
+
+Shift the domain `dom` by moving both domain bounds in the same
+direction. This does not change the size of the domain.
+
+`shfited(dom, shift)` is equivalent to `expanded(dom, -shift,
++shift)`.
+
+See also [`expanded`](@ref).
+"""
+shifted(dom::Domain, shift) = expanded(dom, -shift, +shift)
+export shifted
+
 # Set relations
 
 """
@@ -146,12 +181,15 @@ Base.last(iv::Interval) = iv.last
 # Equality
 Base.:(==)(iv1::Interval, iv2::Interval) = iv1.first == iv2.first && iv1.last == iv2.last
 
+# Domain operations
+expanded(iv::Interval{T}, delta_lo::T, delta_hi::T) where {T} = Interval{T}(iv.first - delta_lo, iv.last + delta_hi)
+
 # Set relations
 Base.issubset(iv1::Interval, iv2::Interval) = iv1.first >= iv2.first && iv1.last <= iv2.last
 Base.isdisjoint(iv1::Interval, iv2::Interval) = iv1.last < iv2.first || iv2.last < iv1.first
 
 # Membership test
-Base.in(x, iv::Interval) = first(iv) <= x <= last(iv)
+Base.in(x, iv::Interval) = first(iv) ≤ x ≤ last(iv)
 
 ################################################################################
 
@@ -207,11 +245,16 @@ Base.last(box::Box) = box.last
 # Equality
 Base.:(==)(box1::Box, box2::Box) = box1.first == box2.first && box1.last == box2.last
 
+# Domain operations
+function expanded(box::Box{D,T}, delta_lo::SVector{D,T}, delta_hi::SVector{D,T}) where {D,T}
+    return Box{D,T}(box.first - delta_lo, box.last + delta_hi)
+end
+
 # Set relations
 Base.issubset(box1::Box{0}, box2::Box{0}) = true
-Base.issubset(box1::Box{D}, box2::Box{D}) where {D} = all((box1.first .>= box2.first) .& (box1.last .<= box2.last))
+Base.issubset(box1::Box{D}, box2::Box{D}) where {D} = all((box1.first .≥ box2.first) .& (box1.last .≤ box2.last))
 Base.isdisjoint(box1::Box{0}, box2::Box{0}) = false
 Base.isdisjoint(box1::Box{D}, box2::Box{D}) where {D} = all((box1.last .< box2.first) .| (box2.last .< box1.first))
 
 # Membership test
-Base.in(x, box::Box) = all(first(box) .<= x .<= last(box))
+Base.in(x, box::Box) = all(first(box) .≤ x .≤ last(box))
