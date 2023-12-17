@@ -1,16 +1,27 @@
 module GraviPet
 
-using FillArrays
-using HCubature
-using SparseArrays
-using SparseArraysCOO
-using StaticArrays
+using Reexport
 
-function lincom(x0::S, y0::T, x1::S, y1::T, x::S) where {S,T}
-    return T(y0 .* ((x - x1) ./ (x0 - x1)) + y1 .* ((x - x0) ./ (x1 - x0)))
-end
+include("Defs.jl")
 
-include("Domain.jl")
-include("Category.jl")
+include("Domains.jl")
+include("Intervals.jl")
+include("Boxes.jl")
+
+include("Categories.jl")
+include("GridFunctions1D.jl")
+include("GridFunctions.jl")
+include("JuliaFunctions.jl")
+include("BlockFunctions.jl")
+
+@reexport using ..Domains
+@reexport using ..Intervals
+@reexport using ..Boxes
+
+@reexport using ..Categories
+@reexport using ..GridFunctions1D
+@reexport using ..GridFunctions
+@reexport using ..JuliaFunctions
+@reexport using ..BlockFunctions
 
 end

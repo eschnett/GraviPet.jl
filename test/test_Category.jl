@@ -156,7 +156,7 @@ Random.seed!(0)
         npoints = rand(2:5, DS)
         blocks = [
             let
-                domi = GraviPet.block_domain(dom, SVector{DS,Int}(nblocks), SVector{DS,Int}(Tuple(i)))
+                domi = GraviPet.BlockFunctions.block_domain(dom, SVector{DS,Int}(nblocks), SVector{DS,Int}(Tuple(i)))
                 make_gf(domi, cod, npoints)
             end for i in CartesianIndices(Tuple(nblocks))
         ]
