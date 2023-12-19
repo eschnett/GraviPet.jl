@@ -10,83 +10,53 @@ struct BlockFunction{DS,S,DT,T} <: Category{Box{DS,S},Box{DT,T}}
     name::AbstractString
     domain::Box{DS,S}
     codomain::Box{DT,T}
-    block_size::SVector{DS,Int}
     blocks::AbstractArray{Category{Box{DS,S},Box{DT,T}},DS}
+    block_lengths_cumsum::Array{Int,DS}
     function BlockFunction{DS,S,DT,T}(
-        name::AbstractString,
-        domain::Box{DS,S},
-        codomain::Box{DT,T},
-        block_size::SVector{DS,Int},
-        blocks::AbstractArray{<:Category{Box{DS,S},Box{DT,T}},DS},
+        name::AbstractString, domain::Box{DS,S}, codomain::Box{DT,T}, blocks::AbstractArray{<:Category{Box{DS,S},Box{DT,T}},DS}
     ) where {DS,S,DT,T}
         isempty(blocks) && throw(ArgumentError("BlockFunction: blocks cannot be empty so that linear functions can be represented"))
-        # This assumes that the blocks are implemented as some kind of `AbstractArray{<:Any,DS}`.
-        # Should we instroduce `AbstractGridFunction`?
-        all(SVector{DS,Int}(size(b.grid)) == block_size for b in blocks) ||
-            throw(ArgumentError("BlockFunction: all blocks must have size `block_size`"))
+        block_lengths_cumsum = accumulate(+, length.(blocks))
         # TODO: Check domains and codomains of all blocks
-        return new{DS,S,DT,T}(name, domain, codomain, block_size, blocks)
+        return new{DS,S,DT,T}(name, domain, codomain, blocks, block_lengths_cumsum)
     end
 end
 function BlockFunction(
     name::AbstractString,
     domain::Box{DS,S},
     codomain::Box{DT,T},
-    # Should we use `NTuple{DS,OrdinalRange}` for this?
-    block_size::SVector{DS,Int},
     # Should we use `Category` instead of `AbstractArray` here?
     blocks::AbstractArray{<:Category{Box{DS,S},Box{DT,T}},DS},
 ) where {DS,S,DT,T}
-    return BlockFunction{DS,S,DT,T}(name, domain, codomain, block_size, blocks)
+    return BlockFunction{DS,S,DT,T}(name, domain, codomain, blocks)
 end
 export BlockFunction
 
-function block_domain(dom::Box{DS,S}, block_size::SVector{DS,Int}, i::SVector{DS,Int}) where {DS,S}
+function block_domain(dom::Box{DS,S}, num_blocks::SVector{DS,Int}, i::SVector{DS,Int}) where {DS,S}
     imin = SVector{DS,Int}(1 for d in 1:DS)
-    imax = block_size
+    imax = num_blocks
     xmin = lincom(imin, first(dom), imax .+ 1, last(dom), i)
     xmax = lincom(imin, first(dom), imax .+ 1, last(dom), i .+ 1)
     dom′ = Box{DS,S}(xmin, xmax)
-    return dom′
+    return dom′::Box{DS,S}
 end
 
 function BlockFunction{DS,S,DT,T}(
-    make_block,
-    name::AbstractString,
-    domain::Box{DS,S},
-    codomain::Box{DT,T},
-    block_size::SVector{DS,Int},
-    blocks_size::SVector{DS,Int},
+    make_block, name::AbstractString, domain::Box{DS,S}, codomain::Box{DT,T}, num_blocks::SVector{DS,Int}
 ) where {DS,S,DT,T}
     blocks = [
         let
             name′ = "$name $(Tuple(i))"
-            dom′ = block_domain(domain, block_size, SVector(Tuple(i)))
-            make_block(name′, dom′, codomain, blocks_size)
-        end for i in CartesianIndices(Tuple(block_size))
+            dom′ = block_domain(domain, num_blocks, SVector{DS,Int}(Tuple(i)))
+            make_block(name′, dom′, codomain)::Category{Box{DS,S},Box{DT,T}}
+        end for i in CartesianIndices(Tuple(num_blocks))
     ]
-    return BlockFunction(name, domain, Box{DT,T}(), block_size, blocks)
+    return BlockFunction(name, domain, Box{DT,T}(), blocks)
 end
 function BlockFunction(
-    make_block,
-    name::AbstractString,
-    domain::Box{DS,S},
-    codomain::Box{DT,T},
-    block_size::SVector{DS,Int},
-    blocks_size::SVector{DS,Int},
+    make_block, name::AbstractString, domain::Box{DS,S}, codomain::Box{DT,T}, num_blocks::SVector{DS,Int}
 ) where {DS,S,DT,T}
-    return BlockFunction{DS,S,DT,T}(make_block, name, domain, codomain, block_size, blocks_size)
-end
-function BlockFunction{DS,S,DT,T}(
-    name::AbstractString, domain::Box{DS,S}, codomain::Box{DT,T}, block_size::SVector{DS,Int}, blocks_size::SVector{DS,Int}
-) where {DS,S,DT,T}
-    make_block(name, dom, cod, npoints) = GridFunction{DS,S,DT,T}(name, dom, cod, npoints)
-    return BlockFunction{DS,S,DT,T}(make_block, name, domain, codomain, block_size, blocks_size)
-end
-function BlockFunction(
-    name::AbstractString, domain::Box{DS,S}, codomain::Box{DT,T}, block_size::SVector{DS,Int}, blocks_size::SVector{DS,Int}
-) where {DS,S,DT,T}
-    return BlockFunction{DS,S,DT,T}(name, domain, codomain, block_size, blocks_size)
+    return BlockFunction{DS,S,DT,T}(make_block, name, domain, codomain, num_blocks)
 end
 
 # Metadata
@@ -98,26 +68,20 @@ Categories.codomain(bf::BlockFunction) = bf.codomain
 function Base.:(==)(bf1::BlockFunction, bf2::BlockFunction)
     domain(bf1) == domain(bf2) || return false
     codomain(bf1) == codomain(bf2) || return false
-    bf1.block_size == bf2.block_size || return false
     return bf1.blocks == bf2.blocks
 end
 
 # Collection
-Base.isempty(x::BlockFunction) = (isempty(x.blocks) || all(isempty.(x.blocks)))::Bool
+Base.isempty(x::BlockFunction) = all(isempty.(x.blocks))::Bool
 Base.length(x::BlockFunction) = sum(length(b) for b in x.blocks)::Int
-function Base.getindex(x::BlockFunction{DS,S,DT,T}, i) where {DS,S,DT,T}
-    imin = SVector{DS,Int}(1 for d in 1:DS)
-    imax = x.block_size .* size(x.blocks)
-    ilen = imax - imin .+ 1
-    istr = DS == 0 ? SVector{DS,Int}() : SVector{DS,Int}(one(S), view(cumprod(ilen), 1:(DS - 1))...)
-    ivec = mod.(fld.(i - 1, istr), ilen) + imin
-    ivec::SVector{DS,<:Integer}
-    @assert (DS == 0 ? zero(S) : sum((ivec - imin) .* istr)) + 1 == i
-    return x[ivec]::SVector{DT,T}
+function Base.getindex(x::BlockFunction{DS,S,DT,T}, i::Int) where {DS,S,DT,T}
+    @assert i >= 1
+    bi = searchsortedfirst(reshape(x.block_lengths_cumsum, :), i)
+    @assert bi <= length(x.blocks)
+    i0 = bi == 1 ? 0 : x.block_lengths_cumsum[bi - 1]
+    return getindex(x.blocks[bi], i - i0)::SVector{DT,T}
 end
-function Base.getindex(x::BlockFunction{DS,S,DT,T}, i::SVector{DS,<:Integer}) where {DS,S,DT,T}
-    return x.blocks[CartesianIndex(Tuple(fld1.(i, x.block_size)))][mod1.(i, x.block_size)]::SVector{DT,T}
-end
+Base.getindex(x::BlockFunction, i::Integer) = getindex(x, Int(i))
 function Base.map(f, x::BlockFunction)
     blocks′ = map(b -> map(f, b), x.blocks)
     VT = eltype(eltype(blocks′))
@@ -138,7 +102,7 @@ end
 # Category
 function Categories.make_identity(bf::BlockFunction)
     blocks = map(make_identity, bf.blocks)
-    return BlockFunction(bf.name, bf.domain, bf.domain, bf.block_size, blocks)
+    return BlockFunction(bf.name, bf.domain, bf.domain, blocks)
 end
 function Base.:∘(bf2::BlockFunction{<:Any,<:Any,DT}, bf1::BlockFunction{DT}) where {DT}
     @assert domain(bf2) == codomain(bf1)
@@ -171,10 +135,10 @@ function Categories.evaluate(bf::BlockFunction{DS,S,DT,T}, x::SVector{DS,S}) whe
     VS = eltype(dom)
     imin = SVector{DS,Int}(first.(axes(bf.blocks)))
     imax = SVector{DS,Int}(last.(axes(bf.blocks)))
-    ix = lincom(first(dom), VS(imin), last(dom), VS(imax .+ 1), x)
-    i = SVector{DS,Int}(clamp(floor(Int, ix[d]), imin[d]:imax[d]) for d in 1:DS)
+    bx = lincom(first(dom), VS(imin), last(dom), VS(imax .+ 1), x)
+    bi = SVector{DS,Int}(clamp(floor(Int, bx[d]), imin[d]:imax[d]) for d in 1:DS)
 
-    return evaluate(bf.blocks[CartesianIndex(Tuple(i))], x)::SVector{DT,T}
+    return evaluate(bf.blocks[CartesianIndex(Tuple(bi))], x)::SVector{DT,T}
 end
 Categories.evaluate(bf::BlockFunction{DS,S}, x::SVector{DS}) where {DS,S} = evaluate(bf, SVector{DS,S}(x))
 

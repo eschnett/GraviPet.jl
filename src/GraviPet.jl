@@ -2,26 +2,39 @@ module GraviPet
 
 using Reexport
 
+# internal definitions
 include("Defs.jl")
 
+# public helpers
+include("Funs.jl")
+
+# abstract types
 include("Domains.jl")
+include("Categories.jl")
+
+# concrete types for domains
 include("Intervals.jl")
 include("Boxes.jl")
 
-include("Categories.jl")
-include("GridFunctions1D.jl")
-include("GridFunctions.jl")
-include("JuliaFunctions.jl")
+# concrete types for functions
 include("BlockFunctions.jl")
+include("GridFunctions.jl")
+include("GridFunctions1D.jl")
+include("JuliaFunctions.jl")
+include("ThreadedFunctions.jl")
+
+@reexport using ..Funs
 
 @reexport using ..Domains
-@reexport using ..Intervals
-@reexport using ..Boxes
-
 @reexport using ..Categories
-@reexport using ..GridFunctions1D
-@reexport using ..GridFunctions
-@reexport using ..JuliaFunctions
+
+@reexport using ..Boxes
+@reexport using ..Intervals
+
 @reexport using ..BlockFunctions
+@reexport using ..GridFunctions
+@reexport using ..GridFunctions1D
+@reexport using ..JuliaFunctions
+@reexport using ..ThreadedFunctions
 
 end

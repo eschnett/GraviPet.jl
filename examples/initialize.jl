@@ -82,7 +82,7 @@ function main()
 
     # Define a Julia function
     # This function takes an `SVector` as input and produces an `SVector` as output.
-    f(x) = SVector(sinpi(4*x[1]))
+    f(x) = SVector(sinpi(4 * x[1]))
     jf = JuliaFunction("wave", dom, cod, f)
 
     npoints = 21
@@ -109,7 +109,7 @@ function main()
 
     Label(fig[1, 2][1, 1], provenance(); justification=:left, padding=(10, 10, 10, 10))
     CairoMakie.Box(fig[1, 2][1, 1]; color=(:black, 0.15), strokewidth=0)
-    Legend(fig[1, 2][2,1], [obj1, obj], ["sampled", "projected"])
+    Legend(fig[1, 2][2, 1], [obj1, obj], ["sampled", "projected"])
 
     # colsize!(fig.layout, 1, Aspect(1, 1.0))
     rowsize!(fig.layout, 1, Aspect(1, 0.5))
