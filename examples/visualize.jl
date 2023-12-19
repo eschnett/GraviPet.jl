@@ -36,10 +36,11 @@ function main()
     coords = renamed("coordinates", make_identity(gf0))
 
     # Define a function
-    f(x, y) = sinpi(x) * cospi(y)
+    # This function takes an `SVector` as input and produces an `SVector` as output.
+    f(x) = SVector(sinpi(4 * hypot(x[1], x[2])))
 
     # Set up a grid function
-    gf = renamed("wave", map(xs -> SVector(f(xs...)), coords))
+    gf = renamed("wave", map(f, coords))
 
     # Prepare data
     xs = mappedarray(xy -> xy[1], view(coords.grid, :, 1))
@@ -57,6 +58,7 @@ function main()
     # Remove superfluous white space on the right of the colorbar
     cb.alignmode = Mixed(; right=0)
 
+    # Set aspect ratio
     colsize!(fig.layout, 1, Aspect(1, 1.0))
     # rowsize!(fig.layout, 1, Aspect(1, 1.0))
 

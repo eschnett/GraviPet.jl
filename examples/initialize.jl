@@ -1,12 +1,27 @@
 module ExampleInitialize
 
+using CairoMakie
+using Dates
 using GraviPet
 using LinearAlgebra
+using MappedArrays
+using SixelTerm
 using StaticArrays
+
+# Both GraviPet and CairoMakie export `Box`
+const Box = GraviPet.Box
 
 ################################################################################
 
 renamed(name::AbstractString, gf::GridFunction) = typeof(gf)(name, gf.domain, gf.codomain, gf.grid)
+
+function provenance()
+    user = get(ENV, "USER", "anonymous")
+    host = gethostname()
+    date = today()
+    # return "GraviPet\n$user@$host\n$date"
+    return "GraviPet\n$user\n$date"
+end
 
 ################################################################################
 
@@ -63,20 +78,45 @@ function main()
     yinf = SVector(Inf)
     cod = Box(-yinf, +yinf)
 
-    # Define a Julia function
-    f(x) = 1.0 # sinpi(x)
-    jf = JuliaFunction("wave", dom, cod, xs -> SVector(f(xs...)))
+    ########################################
 
-    npoints = 11
+    # Define a Julia function
+    # This function takes an `SVector` as input and produces an `SVector` as output.
+    f(x) = SVector(sinpi(4*x[1]))
+    jf = JuliaFunction("wave", dom, cod, f)
+
+    npoints = 21
     gf0 = GridFunction("skeleton", dom, dom, SVector(npoints))
 
     # Project the Julia function onto the discretization
     gf = project(gf0, jf)
-    @show map(xs -> xs[1], gf.grid)
 
     coords = renamed("coordinates", make_identity(gf0))
     gf1 = map(xs -> SVector(f(xs...)), coords)
-    @show map(xs -> xs[1], gf1.grid)
+
+    ########################################
+
+    # Prepare data
+    xs = mappedarray(xy -> xy[1], coords.grid)
+    data = mappedarray(val -> val[1], gf.grid)
+    data1 = mappedarray(val -> val[1], gf1.grid)
+
+    # Visualize it!
+    fig = Figure(; fontsize=30, size=(1280, 960))
+    ax = Axis(fig[1, 1]; title=gf.name)
+    obj1 = scatterlines!(xs, data1; color=:blue, marker=:circle)
+    obj = scatterlines!(xs, data; color=:red, marker=:rect)
+
+    Label(fig[1, 2][1, 1], provenance(); justification=:left, padding=(10, 10, 10, 10))
+    CairoMakie.Box(fig[1, 2][1, 1]; color=(:black, 0.15), strokewidth=0)
+    Legend(fig[1, 2][2,1], [obj1, obj], ["sampled", "projected"])
+
+    # colsize!(fig.layout, 1, Aspect(1, 1.0))
+    rowsize!(fig.layout, 1, Aspect(1, 0.5))
+
+    display(fig)
+
+    ########################################
 
     return nothing
 end

@@ -130,7 +130,9 @@ function Categories.project(gf::GridFunction, cat::Category)
 
     imin = SVector{DS,Int}(first.(axes(gf.grid)))
     imax = SVector{DS,Int}(last.(axes(gf.grid)))
+    dx = (last(dom) - first(dom)) / (imax - imin)
 
+    # Create mass matrix (TODO: Cache this / implement this as structural matrix)
     Mshape = size(gf.grid)
     Msize = prod(Mshape)
     @assert all(first.(axes(gf.grid)) .== 1)
@@ -144,58 +146,53 @@ function Categories.project(gf::GridFunction, cat::Category)
         return off + 1
     end
     M = SparseMatrixCOO{S}(Msize, Msize)
-
     for i0 in CartesianIndices(axes(gf.grid))
         i = SVector{DS,Int}(Tuple(i0))
         for di0 in CartesianIndices(ntuple(d -> -1:+1, DS))
             di = SVector{DS,Int}(Tuple(di0))
             j = i + di
             if all(j .∈ axes(gf.grid))
-                Mvalue = prod(ifelse(di[d] == 0, one(S) / 3, one(S) / 6) for d in 1:DS; init=one(S))
+                Mvalue =
+                    prod(ifelse(di[d] == 0, one(S) * 2 / 3, one(S) / 6) for d in 1:DS; init=one(S)) /
+                    2^count(i .== j .== imin .|| i .== j .== imax)
                 M[Mindex(i), Mindex(j)] = Mvalue
             end
         end
     end
-
     M = sparse(M)
-    @show M
 
     grid = VT[
         let
             i = SVector{DS,Int}(Tuple(i0))
             s = zero(VT)
-            for di0 in CartesianIndices(ntuple(d -> -1:+1, DS))
-                di = SVector{DS,Int}(Tuple(di0))
-                j = i + di
-                if all(j .∈ axes(gf.grid))
-                    Mvalue = prod(ifelse(di[d] == 0, one(S) / 3, one(S) / 6) for d in 1:DS; init=one(S))
-                    M[Mindex(i), Mindex(j)] = Mvalue
-                end
-            end
             for di0 in CartesianIndices(ntuple(d -> -1:0, DS))
                 di = SVector{DS,Int}(Tuple(di0))
                 j = i + di
-                if all((j .>= imin) .& (j .+ 1 .<= imax))
+                if all(imin .<= j .&& j .+ 1 .<= imax)
                     x0 = lincom(imin, first(dom), imax, last(dom), j .+ 0)
                     x1 = lincom(imin, first(dom), imax, last(dom), j .+ 1)
 
-                    y0 = SVector{DS,S}(di[d] + 0 for d in 1:DS)
-                    y1 = SVector{DS,S}(1 - di[d] for d in 1:DS)
+                    # TODO: normalize x to -1...+1 to improve floating
+                    # point accuracy, and so that we don't thave to
+                    # put the grid spacing into `M`
+
+                    y0 = SVector{DS,S}(1 + di[d] for d in 1:DS)
+                    y1 = SVector{DS,S}(0 - di[d] for d in 1:DS)
                     basis(x) = prod(lincom(x0[d], y0[d], x1[d], y1[d], x[d]) for d in 1:DS; init=one(S))::S
 
                     s += hcubature(x -> VT(basis(x) * cat(x)), x0, x1)[1]::VT
                 end
             end
-            s
+            s / prod(dx)
         end for i0 in CartesianIndices(axes(gf.grid))
     ]
     grid::Array{VT,DS}
 
     # grid = reshape(M \ reshape(grid, :), size(grid))
     @assert DT == 1
-    grid = reinterpret(S, grid)
+    grid = reinterpret(T, grid)
     grid = reshape(M \ reshape(grid, :), size(grid))
-    grid = reinterpret(VS, grid)
+    grid = reinterpret(VT, grid)
 
     return GridFunction{DS,S,DT,T}(cat.name, dom, cod, grid)
 end
