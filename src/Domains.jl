@@ -13,8 +13,8 @@ function. A codomain of `Domain{Float64}` describes a scalar function,
 and a codomain of `Domain{SVector{3,Float64}}` describes a
 vector-valued function.
 
-See also [`Interval`](@ref) and [`Box`](@ref) for concrete domain
-types.
+See also [`Interval`](#GraviPet.Intervals.Interval) and
+[`Box`](#GraviPet.Boxes.Box) for concrete domain types.
 """
 abstract type Domain{T} end
 export Domain
