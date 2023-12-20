@@ -59,6 +59,11 @@ Private = false
 Modules = [GraviPet.ThreadedFunctions]
 Private = false
 ```
+### Distributed Functions
+```@autodocs
+Modules = [GraviPet.DistributedFunctions]
+Private = false
+```
 
 ## Miscellaneous
 ```@docs
