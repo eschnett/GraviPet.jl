@@ -22,6 +22,7 @@ include("GridFunctions.jl")
 include("GridFunctions1D.jl")
 include("JuliaFunctions.jl")
 include("ThreadedFunctions.jl")
+include("DistributedFunctions.jl")
 
 @reexport using ..Funs
 
@@ -36,5 +37,6 @@ include("ThreadedFunctions.jl")
 @reexport using ..GridFunctions1D
 @reexport using ..JuliaFunctions
 @reexport using ..ThreadedFunctions
+@reexport using ..DistributedFunctions
 
 end

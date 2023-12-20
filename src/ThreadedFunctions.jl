@@ -7,8 +7,6 @@ using ..Boxes
 using ..Categories
 using ..Funs
 
-# TODO: Add an implementation type `X` at the end and declare `fun::X`
-# to improve efficiency?
 struct ThreadedFunction{DS,S,DT,T} <: Category{Box{DS,S},Box{DT,T}}
     name::AbstractString
     domain::Box{DS,S}
