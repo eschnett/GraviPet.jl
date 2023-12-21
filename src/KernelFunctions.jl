@@ -16,10 +16,7 @@ struct KernelFunction{DS,S,DT,T} <: Category{Box{DS,S},Box{DT,T}}
     codomain::Box{DT,T}
     grid::AbstractArray{SVector{DT,T},DS}
     function KernelFunction{DS,S,DT,T}(
-        name::AbstractString,
-        domain::Box{DS,S},
-        codomain::Box{DT,T},
-        grid::AbstractArray{SVector{DT,T},DS},
+        name::AbstractString, domain::Box{DS,S}, codomain::Box{DT,T}, grid::AbstractArray{SVector{DT,T},DS}
     ) where {DS,S,DT,T}
         all(size(grid) .>= 2) || throw(
             ArgumentError("KernelFunction size must be at least 2 in each dimension so that linear functions can be represented"),
@@ -28,10 +25,7 @@ struct KernelFunction{DS,S,DT,T} <: Category{Box{DS,S},Box{DT,T}}
     end
 end
 function KernelFunction(
-    name::AbstractString,
-    domain::Box{DS,S},
-    codomain::Box{DT,T},
-    grid::AbstractArray{SVector{DT,T},DS},
+    name::AbstractString, domain::Box{DS,S}, codomain::Box{DT,T}, grid::AbstractArray{SVector{DT,T},DS}
 ) where {DS,S,DT,T}
     return KernelFunction{DS,S,DT,T}(name, domain, codomain, grid)
 end
@@ -50,11 +44,7 @@ it convenient to use zero-valued Kernel functions as "templates" or
 "skeletons" when creating other Kernel functions.
 """
 function KernelFunction{DS,S,DT,T}(
-    make_zeros,
-    name::AbstractString,
-    domain::Box{DS,S},
-    codomain::Box{DT,T},
-    grid_size::SVector{DS,Int},
+    make_zeros, name::AbstractString, domain::Box{DS,S}, codomain::Box{DT,T}, grid_size::SVector{DS,Int}
 ) where {DS,S,DT,T}
     # grid = Metal.zeros(SVector{DT,T}, Tuple(grid_size))
     grid = make_zeros(SVector{DT,T}, Tuple(grid_size))
@@ -111,13 +101,17 @@ function Base.map(f, x::KernelFunction{DS}, y::KernelFunction{DS}) where {DS}
 end
 
 # Category
-@kernel function make_identity_kernel!(grid::AbstractArray{S,DS},
-        imin::SVector{DS,Int}, imax::SVector{DS,Int}, 
-        xmin::SVector{DS,S}, xmax::SVector{DS,S}) where {DS,S}
+@kernel function make_identity_kernel!(
+    grid::AbstractArray{SVector{DS,S},DS},
+    @Const(imin::SVector{DS,Int}),
+    @Const(imax::SVector{DS,Int}),
+    @Const(xmin::SVector{DS,S}),
+    @Const(xmax::SVector{DS,S})
+) where {DS,S}
     i0 = @index(Global, NTuple)
-    i = SVector{DS,Int}(i0)
+    i = DS == 0 ? SVector{DS,Int}() : SVector{DS,Int}(i0)
     x = lincom(imin, xmin, imax, xmax, i)
-    grid[i0...] = x
+    grid[i...] = x
     if false
     end
 end
@@ -175,7 +169,7 @@ function Categories.project(kf::KernelFunction, cat::Category)
     function Mindex(i)
         off = 0
         str = 1
-        for d = 1:DS
+        for d in 1:DS
             off += str * (i[d] - 1)
             str *= Mshape[d]
         end
@@ -189,7 +183,7 @@ function Categories.project(kf::KernelFunction, cat::Category)
             j = i + di
             if all(j .∈ axes(kf.grid))
                 Mvalue =
-                    prod(ifelse(di[d] == 0, one(S) * 2 / 3, one(S) / 6) for d = 1:DS; init = one(S)) /
+                    prod(ifelse(di[d] == 0, one(S) * 2 / 3, one(S) / 6) for d in 1:DS; init=one(S)) /
                     2^count(i .== j .== imin .|| i .== j .== imax)
                 M[Mindex(i), Mindex(j)] = Mvalue
             end
@@ -212,9 +206,9 @@ function Categories.project(kf::KernelFunction, cat::Category)
                     # point accuracy, and so that we don't thave to
                     # put the Kernel spacing into `M`
 
-                    y0 = SVector{DS,S}(1 + di[d] for d = 1:DS)
-                    y1 = SVector{DS,S}(0 - di[d] for d = 1:DS)
-                    basis(x) = prod(lincom(x0[d], y0[d], x1[d], y1[d], x[d]) for d = 1:DS; init = one(S))::S
+                    y0 = SVector{DS,S}(1 + di[d] for d in 1:DS)
+                    y1 = SVector{DS,S}(0 - di[d] for d in 1:DS)
+                    basis(x) = prod(lincom(x0[d], y0[d], x1[d], y1[d], x[d]) for d in 1:DS; init=one(S))::S
 
                     s += hcubature(x -> VT(basis(x) * cat(x)), x0, x1)[1]::VT
                 end
@@ -244,14 +238,14 @@ function Categories.evaluate(kf::KernelFunction{DS,S,DT,T}, x::SVector{DS,S}) wh
     imin = SVector{DS,Int}(first.(axes(kf.grid)))
     imax = SVector{DS,Int}(last.(axes(kf.grid)))
     ix = lincom(first(dom), VS(imin), last(dom), VS(imax), x)
-    i = SVector{DS,Int}(clamp(floor(Int, ix[d]), imin[d]:(imax[d]-1)) for d = 1:DS)
+    i = SVector{DS,Int}(clamp(floor(Int, ix[d]), imin[d]:(imax[d] - 1)) for d in 1:DS)
     q = (ix - i)::VS
 
     fx = zero(SVector{DT,T})
-    for di0 = CartesianIndex(ntuple(d -> 0, DS)):CartesianIndex(ntuple(d -> 1, DS))
+    for di0 in CartesianIndex(ntuple(d -> 0, DS)):CartesianIndex(ntuple(d -> 1, DS))
         di = SVector{DS,Int}(Tuple(di0))
         w = one(S)
-        for d = 1:DS
+        for d in 1:DS
             w *= di[d] == 0 ? 1 - q[d] : q[d]
         end
         fx += SVector{DT,T}(w * kf.grid[CartesianIndex(Tuple(i + di))])
@@ -267,13 +261,13 @@ function Categories.integrate(kf::KernelFunction)
     DS = ndims(VS)
     S = eltype(VS)
     T = eltype(cod)
-    imin = SVector{DS,Int}(first(axes(kf.grid)[d]) for d = 1:DS)
-    imax = SVector{DS,Int}(last(axes(kf.grid)[d]) for d = 1:DS)
+    imin = SVector{DS,Int}(first(axes(kf.grid)[d]) for d in 1:DS)
+    imax = SVector{DS,Int}(last(axes(kf.grid)[d]) for d in 1:DS)
     h = prod((last(dom) - first(dom)) ./ (size(kf.grid) .- 1))::S
     s = zero(T)
-    for i0 = CartesianIndex(Tuple(imin)):CartesianIndex(Tuple(imax))
+    for i0 in CartesianIndex(Tuple(imin)):CartesianIndex(Tuple(imax))
         i = SVector{DS,Int}(Tuple(i0))
-        w = prod(i[d] == imin[d] || i[d] == imax[d] ? one(S) / 2 : one(S) for d = 1:DS)
+        w = prod(i[d] == imin[d] || i[d] == imax[d] ? one(S) / 2 : one(S) for d in 1:DS)
         s += T(w * kf.grid[i0])
     end
     return T(h * s)
