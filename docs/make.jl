@@ -6,6 +6,12 @@ push!(LOAD_PATH, "..")
 using Documenter
 using GraviPet
 
-makedocs(; sitename="GraviPet", format=Documenter.HTML(), modules=[GraviPet])
+makedocs(;
+    authors="Erik Schnetter",
+    format=Documenter.HTML(),
+    modules=[GraviPet],
+    pages=["index.md", "Domains" => "domains.md", "Categories" => "categories.md", "Helpers" => "helpers.md"],
+    sitename="GraviPet",
+)
 
-deploydocs(; repo="github.com/eschnett/GraviPet.jl.git", devbranch="main", push_preview=true)
+deploydocs(; devbranch="main", push_preview=true, repo="github.com/eschnett/GraviPet.jl.git")
