@@ -1,6 +1,5 @@
 module KernelFunctions
 
-using GPUArrays
 # using HCubature
 using KernelAbstractions
 # using SparseArrays
@@ -15,12 +14,12 @@ struct KernelFunction{DS,S,DT,T} <: Category{Box{DS,S},Box{DT,T}}
     name::AbstractString
     domain::Box{DS,S}
     codomain::Box{DT,T}
-    grid::AbstractGPUArray{SVector{DT,T},DS}
+    grid::AbstractArray{SVector{DT,T},DS}
     function KernelFunction{DS,S,DT,T}(
         name::AbstractString,
         domain::Box{DS,S},
         codomain::Box{DT,T},
-        grid::AbstractGPUArray{SVector{DT,T},DS},
+        grid::AbstractArray{SVector{DT,T},DS},
     ) where {DS,S,DT,T}
         all(size(grid) .>= 2) || throw(
             ArgumentError("KernelFunction size must be at least 2 in each dimension so that linear functions can be represented"),
@@ -32,7 +31,7 @@ function KernelFunction(
     name::AbstractString,
     domain::Box{DS,S},
     codomain::Box{DT,T},
-    grid::AbstractGPUArray{SVector{DT,T},DS},
+    grid::AbstractArray{SVector{DT,T},DS},
 ) where {DS,S,DT,T}
     return KernelFunction{DS,S,DT,T}(name, domain, codomain, grid)
 end
@@ -59,7 +58,7 @@ function KernelFunction{DS,S,DT,T}(
 ) where {DS,S,DT,T}
     # grid = Metal.zeros(SVector{DT,T}, Tuple(grid_size))
     grid = make_zeros(SVector{DT,T}, Tuple(grid_size))
-    return KernelFunction(name, domain, Box{DT,T}(), grid::AbstractGPUArray{SVector{DT,T},DS})
+    return KernelFunction(name, domain, Box{DT,T}(), grid::AbstractArray{SVector{DT,T},DS})
 end
 function KernelFunction(name::AbstractString, domain::Box{DS,S}, codomain::Box{DT,T}, grid_size::SVector{DS,Int}) where {DS,S,DT,T}
     return KernelFunction{DS,S,DT,T}(name, domain, codomain, grid_size)
@@ -78,7 +77,7 @@ function Base.:(==)(kf1::KernelFunction, kf2::KernelFunction)
 end
 
 # Collection
-# @kernel function getindex_kernel!(result::AbstractGPUArray{0,T}, @Const(grid::AbstractGPUArray{D,T}), @Const(i)) where {D,T}
+# @kernel function getindex_kernel!(result::AbstractArray{0,T}, @Const(grid::AbstractArray{D,T}), @Const(i)) where {D,T}
 #     result[] = grid[i]
 #     if false end
 # end
@@ -91,7 +90,7 @@ function Base.getindex(x::KernelFunction, i)
     # result = x.undefs(SVector{DT,T}, ())
     # kernel!(result, x.grid, i)
     # return Array(result)[]
-    return Array(view(x, i))[]
+    return Array(view(x.grid, i))[]
 end
 Base.getindex(x::KernelFunction{DS}, i::SVector{DS}) where {DS} = getindex(x, LinearIndices(x.grid)[i...])
 function Base.map(f, x::KernelFunction)
@@ -112,7 +111,7 @@ function Base.map(f, x::KernelFunction{DS}, y::KernelFunction{DS}) where {DS}
 end
 
 # Category
-@kernel function make_identity_kernel!(grid::AbstractGPUArray{S,DS},
+@kernel function make_identity_kernel!(grid::AbstractArray{S,DS},
         imin::SVector{DS,Int}, imax::SVector{DS,Int}, 
         xmin::SVector{DS,S}, xmax::SVector{DS,S}) where {DS,S}
     i0 = @index(Global, NTuple)
@@ -133,8 +132,9 @@ function Categories.make_identity(kf::KernelFunction)
     imax = SVector{DS,Int}(last.(axes(kf.grid)))
     backend = KernelAbstractions.get_backend(kf.grid)
     kernel! = make_identity_kernel!(backend)
-    grid = similar(kf.grid; element_type=VS)
-    kernel!(grid, imin, imax, xmin, xmax; ndrange=size(grid))
+    grid = similar(kf.grid, VS)
+    ndrange = ndims(grid) == 0 ? (1,) : size(grid)
+    kernel!(grid, imin, imax, xmin, xmax; ndrange=ndrange)
     return KernelFunction(kf.name, dom, dom, grid)
 end
 function Base.:∘(kf2::KernelFunction{<:Any,<:Any,DT}, kf1::KernelFunction{DT}) where {DT}

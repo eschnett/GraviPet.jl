@@ -10,6 +10,7 @@ println("    - $(num_physical_cores()) cores")
 
 @everywhere using DoubleFloats
 @everywhere using GraviPet
+@everywhere using KernelAbstractions
 @everywhere using Random
 @everywhere using StaticArrays
 @everywhere using Test
@@ -24,5 +25,17 @@ end
 
 ################################################################################
 
-include("test_Domain.jl")
-include("test_Category.jl")
+# Define tests
+include("test_Domains.jl")
+include("test_Categories.jl")
+
+# Run domain tests
+include("rutests_Intervals.jl")
+include("runtests_Boxes.jl")
+
+# Run category tests
+include("runtests_GridFunctions1D.jl")
+include("runtests_GridFunctions.jl")
+include("runtests_BlockFunctions.jl")
+include("runtests_ThreadedFunctions.jl")
+include("runtests_DistributedFunctions.jl")

@@ -29,10 +29,19 @@ adapters that render any other kind of grid function multi-threaded.
 - Do not call `extrema` to use the image as codomain in `map`. For `JuliaFunction` we known the codomain, for other functions be conservative.
 - Determine the result type of `map` in a predictable way: For regular functions call `f` on `zero` (is this a good idea?), for `Fun` and `JuliaFunction` use the provided codomain. We really need to know the result type ahead of time because many things run asynchronously.
 - Add `map!`.
-- Add functions to modify domains and "categories":
+- Add functions to modify domains and functions ("categories"):
   - change name
   - reduce domain, extend codomain
   - calculate codomain from image
+- Clean up tests: One file per abstract function
+- Test projections and integrations
+- Add alias `coordinates` for `make_identity`
+- Add alias `interpolate` for `evaluate`
+- Add vectorized `evaluate`
+- Think about ghost zones
+  - Make new `AbstractGridFunction` with efficient ghost zones?
+  - What about refined grid functions, as needed for mesh refinement?
+- Provide `similar`
 
 ## Acknowledgements
 
