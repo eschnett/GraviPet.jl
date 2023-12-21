@@ -30,7 +30,7 @@ include("test_Domains.jl")
 include("test_Categories.jl")
 
 # Run domain tests
-include("rutests_Intervals.jl")
+include("runtests_Intervals.jl")
 include("runtests_Boxes.jl")
 
 # Run category tests
