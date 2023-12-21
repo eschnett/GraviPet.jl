@@ -42,6 +42,16 @@ adapters that render any other kind of grid function multi-threaded.
   - Make new `AbstractGridFunction` with efficient ghost zones?
   - What about refined grid functions, as needed for mesh refinement?
 - Provide `similar`
+- Speed up tests by running fewer cases
+- Add CUDA, Metal tests
+- Measure performance
+- Add more discretizations:
+  - tree
+  - spectral
+  - unstructured
+  - mesh refinement
+  - multi-block
+- Add symbolic functions
 
 ## Acknowledgements
 
