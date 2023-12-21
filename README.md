@@ -23,6 +23,17 @@ abstractions*. That is, instead of multi-threaded finite differencing
 grid function, there exist basic (serial) grid functions, as well as
 adapters that render any other kind of grid function multi-threaded.
 
+## Ideas and Plans
+
+- Rename `Category` to something else, e.g. `AbstractFunction`.
+- Do not call `extrema` to use the image as codomain in `map`. For `JuliaFunction` we known the codomain, for other functions be conservative.
+- Determine the result type of `map` in a predictable way: For regular functions call `f` on `zero` (is this a good idea?), for `Fun` and `JuliaFunction` use the provided codomain. We really need to know the result type ahead of time because many things run asynchronously.
+- Add `map!`.
+- Add functions to modify domains and "categories":
+  - change name
+  - reduce domain, extend codomain
+  - calculate codomain from image
+
 ## Acknowledgements
 
 The GraviPet logo was created by [Grabriela
