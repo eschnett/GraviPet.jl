@@ -34,6 +34,8 @@ end
 
 @static if VERSION >= v"1.8"
     # Metal requires at least Julia 1.8
+    using Pkg
+    Pkg.add("Metal")
     using Metal
     if Metal.functional()
         Random.seed!(0)
