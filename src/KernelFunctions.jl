@@ -63,10 +63,62 @@ Categories.codomain(kf::KernelFunction) = kf.codomain
 function Base.:(==)(kf1::KernelFunction, kf2::KernelFunction)
     domain(kf1) == domain(kf2) || return false
     codomain(kf1) == codomain(kf2) || return false
-    return kf1.grid == kf2.grid
+    kf1.grid === kf2.grid && return true
+    # return kf1.grid == kf2.grid
+    # TODO: use a proper `mapreduce` kernel
+    return Array(kf1.grid) == Array(kf2.grid)
 end
 
 # Collection
+
+@kernel function map_kernel!(@Const(f::F), r::AbstractArray{R,D}, @Const(x::LinearIndices{D})) where {F,D,R}
+    i = @index(Global, CartesianIndex)
+    r[i] = f(NTuple(i))
+    if false
+    end
+end
+
+@kernel function map_kernel!(@Const(f::F), r::AbstractArray{R,D}, @Const(x::AbstractArray{T,D})) where {F,D,R,T}
+    i = @index(Global, Linear)
+    r[i] = f(x[i])
+    if false
+    end
+end
+
+@kernel function map_kernel!(
+    @Const(f::F), r::AbstractArray{R,D}, @Const(x::AbstractArray{T,D}), @Const(y::AbstractArray{U,D})
+) where {F,D,R,T,U}
+    i = @index(Global, Linear)
+    r[i] = f(x[i], y[i])
+    if false
+    end
+end
+
+@kernel function mapreduce_kernel!(
+    @Const(f::F), @Const(op::Op), r::AbstractArray{R,0}, @Const(x::AbstractArray{T,D}), @Const(y::AbstractArray{U,D})
+) where {F,Op,D,R,T,U}
+    local_r = @localmem R ()
+    li = @index(Local, Linear)
+    if li == 1
+        local_r[] = zero(R)
+    end
+    @synchronize()
+
+    i = @index(Global, Linear)
+    if i == 1
+        r[] = zero(R)
+    end
+    KernelAbstractions.@atomic local_r[] = op(local_r[], f(x[i], y[i]))
+    @synchronize()
+
+    if li == 1
+        KernelAbstractions.@atomic r[] = op(lr[], local_r[])
+    end
+
+    if false
+    end
+end
+
 # @kernel function getindex_kernel!(result::AbstractArray{0,T}, @Const(grid::AbstractArray{D,T}), @Const(i)) where {D,T}
 #     result[] = grid[i]
 #     if false end
@@ -80,6 +132,8 @@ function Base.getindex(x::KernelFunction, i)
     # result = x.undefs(SVector{DT,T}, ())
     # kernel!(result, x.grid, i)
     # return Array(result)[]
+    ndims(x.domain) == 0 && return Array(x.grid)[begin]
+    ndims(x.codomain) == 0 && return zero(eltype(x))
     return Array(view(x.grid, i))[]
 end
 Base.getindex(x::KernelFunction{DS}, i::SVector{DS}) where {DS} = getindex(x, LinearIndices(x.grid)[i...])
@@ -229,7 +283,7 @@ end
 
 function Categories.evaluate(kf::KernelFunction{DS,S,DT,T}, x::SVector{DS,S}) where {DS,S,DT,T}
     isempty(kf.grid) && return zero(SVector{DT,T})::SVector{DT,T}
-    length(kf.grid) == 1 && return kf.grid[begin]::SVector{DT,T}
+    length(kf.grid) == 1 && return Array(kf.grid)[begin]::SVector{DT,T}
 
     # x = first <=> i = firstindex
     # x = last  <=> i = lastindex
@@ -241,6 +295,8 @@ function Categories.evaluate(kf::KernelFunction{DS,S,DT,T}, x::SVector{DS,S}) wh
     i = SVector{DS,Int}(clamp(floor(Int, ix[d]), imin[d]:(imax[d] - 1)) for d in 1:DS)
     q = (ix - i)::VS
 
+    DT == 0 && return zero(SVector{DT,T})::SVector{DT,T}
+    cpu_view = Array(view(kf.grid, ntuple(d -> i[d]:i[d]+1, DS)...))
     fx = zero(SVector{DT,T})
     for di0 in CartesianIndex(ntuple(d -> 0, DS)):CartesianIndex(ntuple(d -> 1, DS))
         di = SVector{DS,Int}(Tuple(di0))
@@ -248,7 +304,8 @@ function Categories.evaluate(kf::KernelFunction{DS,S,DT,T}, x::SVector{DS,S}) wh
         for d in 1:DS
             w *= di[d] == 0 ? 1 - q[d] : q[d]
         end
-        fx += SVector{DT,T}(w * kf.grid[CartesianIndex(Tuple(i + di))])
+        # fx += SVector{DT,T}(w * kf.grid[CartesianIndex(Tuple(i + di))])
+        fx += SVector{DT,T}(w * cpu_view[(di .+ 1)...])
     end
     return fx::SVector{DT,T}
 end

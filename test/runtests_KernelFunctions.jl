@@ -33,10 +33,12 @@ Random.seed!(0)
 end
 
 @static if VERSION >= v"1.8"
+    # Metal requires at least Julia 1.8
     using Metal
     if Metal.functional()
         Random.seed!(0)
-        @testset "KernelFunction [Metal] S=$S^$DS T=$T^$DT" for DS in 0:4, S in [Float32, Double32], DT in 0:4, T in [S]
+        # `Float64` is not supported on Metal, `Double32` does not work
+        @testset "KernelFunction [Metal] S=$S^$DS T=$T^$DT" for DS in 0:4, S in [Float16, Float32], DT in 0:4, T in [S]
             function make_dom()
                 xmin = random_SVector(
                     SVector{DS,S}(S(-1) for d in 1:DS), SVector{DS,S}(S(1//100) for d in 1:DS), SVector{DS,S}(S(+1) for d in 1:DS)
@@ -74,13 +76,12 @@ end
 end
 
 using CUDA
-if CUA.functional()
+if CUDA.functional()
     Random.seed!(0)
     @testset "KernelFunction [CUDA] S=$S^$DS T=$T^$DT" for DS in 0:4, S in [Float32, Float64, Double64], DT in 0:4, T in [S]
         function make_dom()
-            xmin = random_SVector(
-                )
-                SVector{DS,S}(S(-1) for d in 1:DS), SVector{DS,S}(S(1//100) for d in 1:DS), SVector{DS,S}(S(+1) for d in 1:DS)
+            xmin = random_SVector()
+            SVector{DS,S}(S(-1) for d in 1:DS), SVector{DS,S}(S(1//100) for d in 1:DS), SVector{DS,S}(S(+1) for d in 1:DS)
             xmax = random_SVector(xmin .+ 1, SVector{DS,S}(S(1//100) for d in 1:DS), xmin .+ 10)
             dom = Box(xmin, xmax)
             values = [random_SVector(xmin, SVector{DS,S}(S(1//100) for d in 1:DS), xmax) for n in 1:10]
