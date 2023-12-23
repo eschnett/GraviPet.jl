@@ -16,7 +16,7 @@ println("    - $(num_physical_cores()) cores")
 @everywhere using StaticArrays
 @everywhere using Test
 
-@everywhere @static if Sys.apple() && VERSION >= v"1.8"
+@everywhere @static if Sys.isapple() && VERSION >= v"1.8"
     # Metal requires macOS and at least Julia 1.8
     using Pkg
     Pkg.add("Metal")
