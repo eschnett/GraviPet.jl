@@ -8,12 +8,20 @@ println("    - $(nworkers()) worker processes")
 println("    - $(nthreads()) threads")
 println("    - $(num_physical_cores()) cores")
 
+@everywhere using CUDA
 @everywhere using DoubleFloats
 @everywhere using GraviPet
 @everywhere using KernelAbstractions
 @everywhere using Random
 @everywhere using StaticArrays
 @everywhere using Test
+
+@everywhere @static if VERSION >= v"1.8"
+    # Metal requires at least Julia 1.8
+    using Pkg
+    Pkg.add("Metal")
+    using Metal
+end
 
 ################################################################################
 
@@ -25,18 +33,48 @@ end
 
 ################################################################################
 
+alltests = [
+    # Domain tests
+    "Intervals",
+    "Boxes",
+    # Category tests
+    "GridFunctions1D",
+    "GridFunctions",
+    "BlockFunctions",
+    "ThreadedFunctions",
+    "DistributedFunctions",
+    "KernelFunctions_CPU",
+    "KernelFunctions_CUDA",
+    "KernelFunctions_Metal",
+]
+chosentests = split(get(ENV, "TESTS", "all"))
+tests = []
+for test in chosentests
+    if test == "all"
+        append!(tests, alltests)
+    elseif test in alltests
+        push!(tests, test)
+    else
+        error("Unknown test \"$test\"")
+    end
+end
+unique!(tests)
+println("Selected tests:")
+for test in tests
+    println("    - $test")
+end
+if isempty(tests)
+    println("No tests selected, doing nothing")
+end
+
+################################################################################
+
 # Define tests
 include("test_Domains.jl")
 include("test_Categories.jl")
 
-# Run domain tests
-include("runtests_Intervals.jl")
-include("runtests_Boxes.jl")
-
-# Run category tests
-include("runtests_GridFunctions1D.jl")
-include("runtests_GridFunctions.jl")
-include("runtests_BlockFunctions.jl")
-include("runtests_ThreadedFunctions.jl")
-include("runtests_DistributedFunctions.jl")
-include("runtests_KernelFunctions.jl")
+println("Running tests:")
+for test in tests
+    include("runtests_$test.jl")
+end
+println("Done.")

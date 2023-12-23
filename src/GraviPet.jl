@@ -25,6 +25,8 @@ include("ThreadedFunctions.jl")
 include("DistributedFunctions.jl")
 include("KernelFunctions.jl")
 
+using ..Defs
+
 @reexport using ..Funs
 
 @reexport using ..Domains

@@ -296,7 +296,7 @@ function Categories.evaluate(kf::KernelFunction{DS,S,DT,T}, x::SVector{DS,S}) wh
     q = (ix - i)::VS
 
     DT == 0 && return zero(SVector{DT,T})::SVector{DT,T}
-    cpu_view = Array(view(kf.grid, ntuple(d -> i[d]:i[d]+1, DS)...))
+    cpu_view = Array(view(kf.grid, ntuple(d -> i[d]:(i[d] + 1), DS)...))
     fx = zero(SVector{DT,T})
     for di0 in CartesianIndex(ntuple(d -> 0, DS)):CartesianIndex(ntuple(d -> 1, DS))
         di = SVector{DS,Int}(Tuple(di0))
