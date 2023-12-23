@@ -1,5 +1,5 @@
-@static if VERSION >= v"1.8"
-    # Metal requires at least Julia 1.8
+@static if Sys.apple() && VERSION >= v"1.8"
+    # Metal requires macOS and at least Julia 1.8
     if Metal.functional()
         Random.seed!(0)
         # `Float64` is not supported on Metal, `Double32` does not work
